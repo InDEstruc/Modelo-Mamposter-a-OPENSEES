@@ -1,0 +1,274 @@
+puts "IN-Model of the Masonry Infill Wall"
+#
+#  Script:
+#  Edwin M. R. Martínez && José G. Rangel Ramírez
+#  May of 2014
+#
+# Infill Wall Model With In-Plane, Out-of-Plane Interaction and Element Removal During Simulation:
+# M. Selim Gunay and Khalid M. Mosalam, University of California, Berkeley
+# http://opensees.berkeley.edu/wiki/index.php/Infill_Wall_Model_With_In-Plane,_Out-of-Plane_Interaction_and_Element_Removal_During_Simulation
+# Modified for consider the possibility of plasticity spread away of the plastic length
+# with the new element forceBeamColumn
+# ______________________________________________________________________________________________________________________________________________
+# _____________________________________________________________________________________________________________________________________________
+# PROPERTIES OF THE MASONRY ELEMENTS TO BE DECLARED
+
+set floors 4 ;   # Number of floors WITH masonry walls
+set indtwall 2 ;   # Indicator for the type of masonry wall: 1 is for the classic K-M used element beam with hinges, 2 is for the new force based element
+set gravity 9.80665 ; # Gravity acceleration constant
+set Ubig 1.00E+10; 			# a really large number
+set maxIters 5; 			# maxi number of iterations 
+set tol 10.00E-13; 			# Tolerance for the section integration of the elements
+set nbuild 7 ; 			# the number of building inside the SIB path
+
+# Number of masonry walls in the structure FOR EACH FLOOR
+set mw(1.nummwalls) 12 ;
+set mw(2.nummwalls) 12 ;
+set mw(3.nummwalls) 12 ;
+set mw(4.nummwalls) 12 ;
+
+# List of the initial nodes of the diagonal element for the $nummwalls, this most be the inferior nodes FOR EACH FLOOR
+set mw(1.iinodes) [list 17 18 19 29 30 31 20 24 28 17 21 25] ;
+set mw(2.iinodes) [list 33 34 35 45 46 47 36 40 44 33 37 41] ;
+set mw(3.iinodes) [list 49 50 51 61 62 63 52 56 60 49 53 57] ;
+set mw(4.iinodes) [list 65 66 67 77 78 79 68 72 76 65 69 73] ;
+
+# List of the final nodes of the diagonal element for the $nummwalls, this most be the superior nodes FOR EACH FLOOR
+set mw(1.ifnodes) [list 34 35 36 46 47 48 40 44 48 37 41 45] ;
+set mw(2.ifnodes) [list 50 51 52 62 63 64 56 60 64 53 57 61] ;
+set mw(3.ifnodes) [list 66 67 68 78 79 80 72 76 80 69 73 77] ;
+set mw(4.ifnodes) [list 82 83 84 94 95 96 88 92 96 85 89 93] ;
+
+ # Indicator of the transformation for the $nummwalls: is 1 if the masonry wall its parallel to the global X-Y plane or 2 if its parallel to the global Z-Y plane FOR EACH FLOOR
+set mw(1.iiddirect) [list 1 1 1 1 1 1 2 2 2 2 2 2] ;
+set mw(2.iiddirect) [list 1 1 1 1 1 1 2 2 2 2 2 2] ;
+set mw(3.iiddirect) [list 1 1 1 1 1 1 2 2 2 2 2 2] ;
+set mw(4.iiddirect) [list 1 1 1 1 1 1 2 2 2 2 2 2] ;
+
+# File with extension containing the displacement interaction curve used for the recorder Collapse (file_infill) FOR EACH FLOOR
+set mw(1.fileremoval) "Dispwall1-cg$nbuild.tcl" ;
+set mw(2.fileremoval) "Dispwall2-cg$nbuild.tcl" ;
+set mw(3.fileremoval) "Dispwall3-cg$nbuild.tcl" ;
+set mw(4.fileremoval) "Dispwall4-cg$nbuild.tcl" ;
+
+# Number of masonry walls in the structure FOR EACH FLOOR
+set mw(1.nummfibers) 10 ;
+set mw(2.nummfibers) 10 ;
+set mw(3.nummfibers) 10 ;
+set mw(4.nummfibers) 10 ;
+
+# _____________________________________________________________________________________________________________________________________________
+# _____________________________________________________________________________________________________________________________________________
+
+# PROPERTIES OF THE MASONRY ELEMENTS TO BE CALCULATED
+
+# Masonry modulus of elasticity FOR EACH FLOOR
+set mw(1.EminfM) 62592515.218;
+set mw(2.EminfM) 62031571.084;
+set mw(3.EminfM) 62607165.483;
+set mw(4.EminfM) 76861989.245;
+
+# Area of the diagonal section FOR EACH FLOOR
+set mw(1.AreainfM) 0.0969282;
+set mw(2.AreainfM) 0.0872415;
+set mw(3.AreainfM) 0.0927101;
+set mw(4.AreainfM) 0.0909054;
+
+# Modal effective weight of the infill masonry wall OOP FOR EACH FLOOR
+set mw(1.Winf) 1363.1535952 ;
+set mw(2.Winf) 1290.7696549 ;
+set mw(3.Winf) 1346.2485418 ;
+set mw(4.Winf) 1421.1317907 ;
+
+# Moment of inertia for the masonry infill wall like a diagonal element FOR EACH FLOOR
+set mw(1.InertiainfM) 0.005946363 ;
+set mw(2.InertiainfM) 0.004226783 ;
+set mw(3.InertiainfM) 0.005192289 ;
+set mw(4.InertiainfM) 0.005061215;
+
+# Fy of each of the $nummfibers fibers FOR EACH FLOOR
+set mw(1.fyfibinf)  [list 111690.8634415 205997.9640287 284983.7131553 386178.7231933 708685.2172242 708685.2172242 386178.7231933 284983.7131553 205997.9640287 111690.8634415] ;
+set mw(2.fyfibinf)  [list 59602.6186935 188586.1657278 347336.6781134 615286.0949782 1928497.0925451 1928497.0925451 615286.0949782 347336.6781134 188586.1657278 59602.6186935] ;
+set mw(3.fyfibinf)  [list 358753.4817649 245304.5736753 200526.1342691 166042.165279 113889.0179173 113889.0179173 166042.165279 200526.1342691 245304.5736753 358753.4817649] ;
+set mw(4.fyfibinf)  [list 53725.2889732 201403.2641672 405839.7872884 782056.8727002 2900143.7029027 2900143.7029027 782056.8727002 405839.7872884 201403.2641672 53725.2889732] ;  
+
+# Area of each of the $nummfibers fibers FOR EACH FLOOR
+set mw(1.areafibinf) [list 0.0091263 0.0094915 0.009691 0.0098816 0.0102737 0.0102737 0.0098816 0.009691 0.0094915 0.0091263] ;
+set mw(2.areafibinf) [list 0.0164323 0.0099618 0.0076399 0.0059592 0.0036275 0.0036275 0.0059592 0.0076399 0.0099618 0.0164323];
+set mw(3.areafibinf) [list 0.0011813 0.0033138 0.0057261 0.0095551 0.0265788 0.0265788 0.0095551 0.0057261 0.0033138 0.0011813] ;
+set mw(4.areafibinf) [list 0.0201131 0.0102914 0.007214 0.0051727 0.0026614 0.0026614 0.0051727 0.007214 0.0102914 0.0201131] ;
+
+# Z local section coordinate of each of the $nummfibers fibers FOR EACH FLOOR
+set mw(1.zfibinf) [list 0.4619499 0.2408304 0.1704983 0.1233939 0.0646741 -0.0646741 -0.1233939 -0.1704983 -0.2408304 -0.4619499] ;
+set mw(2.zfibinf) [list 0.3197037 0.1666725 0.1179975 0.0853978 0.0447593 -0.0447593 -0.0853978 -0.1179975 -0.1666725 -0.3197037] ;
+set mw(3.zfibinf) [list 0.7991907 0.4166456 0.2949685 0.2134761 0.1118886 -0.1118886 -0.2134761 -0.2949685 -0.4166456 -0.7991907] ;
+set mw(4.zfibinf) [list 0.3226134 0.1681895 0.1190714 0.086175 0.0451666 -0.0451666 -0.086175 -0.1190714 -0.1681895 -0.3226134] ;
+
+# ______________________________________________________________________________________________________________________________________________
+# ______________________________________________________________________________________________________________________________________________
+# ______________________________________________________________________________________________________________________________________________
+
+# Tags for the first floor with masonry walls
+set nodeID [ expr $nodjmasniv ] ; # Tag for new OOP nodes
+set lasttag [expr $BC($numcol.IDNUM)*8 - 0]  ;  # Tag for the last BC defined
+set sectionpin   [ expr $lasttag + 1]  ;  # Tag for Section defined control
+set Torsionmat [ expr $lasttag + 2] ; # Tag for uniaxialmaterial control
+set InfillTransf1   [ expr $lasttag + 3]  ;  # Tag for transformation of local to global coordinates
+set InfillTransf2   [ expr $lasttag + 4]  ;  # Tag for transformation of local to global coordinates
+
+geomTransf Linear $InfillTransf1 0 0 -1 ;       # This applied when the wall is parallel to the X-Y plane
+geomTransf Linear $InfillTransf2 1 0 0 ;        # This applied when the wall is parallel to the Z-Y plane
+
+for { set i 1 } { $i < [ expr $floors + 1 ] } { incr i } {
+	 variable EminfM $mw($i.EminfM) ;
+	 variable AreainfM $mw($i.AreainfM) ;
+	 variable Winf $mw($i.Winf) ;
+	 variable nummwalls $mw($i.nummwalls) ;
+	 variable nummfibers $mw($i.nummfibers) ;
+	 variable InertiainfM $mw($i.InertiainfM) ;
+	 variable iinodes  $mw($i.iinodes) ;
+	 variable ifnodes  $mw($i.ifnodes) ;
+	 variable iiddirect $mw($i.iiddirect) ;
+	 variable fileremoval $mw($i.fileremoval) ;
+	 variable fyfibinf $mw($i.fyfibinf) ;
+	 variable areafibinf $mw($i.areafibinf) ;
+	 variable zfibinf $mw($i.zfibinf) ;
+	 variable massinf [ expr $Winf/$gravity] ;
+     
+     # PROPERTIES OF THE MASONRY ELEMENTS THAT ARE CALCULATED
+     
+     # DEFINING THE FIBER PROPERTIES OF THE PLASTIC HINGE FOR THE MASONRY DIAGONAL ELEMENTS
+     puts " Defining the Fiber Properties of the Masonry Diagonal Elements"
+     
+	 variable iinfmattag [ expr $Torsionmat+1] ;
+	 variable sectioninf   [expr $sectionpin + 1]  ;  # Tag for entire section-aggregator
+     
+	 section fiberSec $sectioninf {
+     
+         for { set j 0 } { $j < [ expr $nummfibers ] } { incr j } {
+     
+    		 set ifyfibinf [lindex $fyfibinf $j]	 ;
+    		 set iareafibinf [lindex $areafibinf $j]	 ;
+    		 set izfibinf [lindex $zfibinf $j]	 ;
+    		 uniaxialMaterial Steel01 $iinfmattag $ifyfibinf $EminfM 0.02 ;
+    		 fiber 0.0 $izfibinf $iareafibinf $iinfmattag ;
+    		 set iinfmattag [ expr $iinfmattag+1] ;
+         } ;
+         # This fiber in y direction with very small area is needed to supply
+         # a very small in plane stiffness
+         uniaxialMaterial Steel01 $iinfmattag 1.000E+40 $EminfM 0.02 ;
+         layer straight $iinfmattag 1 0.0001 1.0 0.0 1.0 0.0 ;
+     } ;
+	 
+     # Definition of the aggregate uniaxialMaterial with rigid torsion stiffness
+     set Torsionmat [ expr $iinfmattag + 1 ] ;
+     uniaxialMaterial Elastic $Torsionmat 1.00E+12 ;
+	 
+	 # Here its assigned the fiber section to the elastic section, as can we see the fiber are going to control the Torsion
+     set sectioninfT   [expr $sectioninf + 1]  ;  # Tag for section
+	 section Aggregator $sectioninfT $Torsionmat T -section $sectioninf ;
+	 
+	 # Definition of the interior section of the diagonal (required for the force based element) as a elastic section with previously calculated properties
+     set secintertag [ expr $sectioninfT + 1 ] ;
+     section Elastic $secintertag $EminfM $AreainfM 1.e-5 $InertiainfM [expr $EminfM/2.5] $Ubig ;
+  
+     # Definition of the elastic section for pin connection with the frame of surrounding
+     set sectionpin [ expr $secintertag + 1 ] ;
+     section Elastic $sectionpin $EminfM $AreainfM 1.000E-3 1.000E-3 [expr $EminfM/2.5] 1.000E-3 ;
+     
+     # DECLARATION OF EACH OF THE NODES IN THE MIDDLE OF THE DIAGONAL FRAME ELEMENT, WITH THE CORRESPONDING OOP MASS
+     puts " Declaration of the OOP Nodes and the Diagonal Elements"
+
+	 if {$i == 1} {
+		 set infnum [ expr $sectionpin + 1 ] ;
+         set infnum2 [ expr $infnum + 1 ] ;  
+         set nodeID [ expr $nodeID + 1 ] ;		 
+     } elseif {$i > 1}  {
+         set infnum2 [ expr $infnum + 1 ] ;
+     }
+	 
+	 
+     for {set j 0} {$j < [ expr $nummwalls ]} {incr j} {
+     
+          # This are the coordinates of the initial and final nodes
+     	 set inodes [lindex $iinodes $j]	 ;
+     	 set fnodes [lindex $ifnodes $j]	 ;
+     	 set iddirect [lindex $iiddirect $j]	 ;
+     
+     	 set idinodes $nod($inodes.id) ;
+     	 set idfnodes $nod($fnodes.id) ;
+     	 set xinodes  $nod($idinodes.nodx) ;
+     	 set zinodes  $nod($idinodes.nodz) ;
+     	 set yinodes  $nod($idinodes.nody) ;
+     	 set xfnodes  $nod($idfnodes.nodx) ;
+     	 set zfnodes  $nod($idfnodes.nodz) ;
+     	 set yfnodes  $nod($idfnodes.nody) ;
+     
+     	 # In this section if the indicator of the transformation is 1 the masonry wall its parallel to the global X-Y plane or 2 if its parallel to the global Z-Y plane
+     	 if {$iddirect == 1} {
+     	     set InfillTransf $InfillTransf1 ;       # This applied when the wall is parallel to the X-Y plane
+     		 set CLCol [expr abs($yfnodes-$yinodes) ];
+     		 set CLBeam [expr abs($xfnodes-$xinodes) ];
+     	     # This are the calculated coordinates for the middle node
+         	 set Z [expr abs(($zfnodes-$zinodes)/2)+$zinodes ] ;
+        	 set Y [expr abs(($yfnodes-$yinodes)/2)+$yinodes ] ;
+        	 set X [expr abs(($xfnodes-$xinodes)/2)+$xinodes ] ;     
+     	     # Calculated the length of the diagonal element
+     	     set rinfM [expr pow((pow($CLCol,2.0)+pow($CLBeam,2.0)),0.5)];
+			 node $nodeID $X $Y $Z -mass 0.0 0.0 [expr $massinf] 0.0 0.0 0.0;			 
+     	 } elseif {$iddirect == 2}  {
+     	     set InfillTransf $InfillTransf2 ;        # This applied when the wall is parallel to the Z-Y plane
+     		 set CLCol [expr abs($yfnodes-$yinodes) ];
+     		 set CLBeam [expr abs($zfnodes-$zinodes) ];
+     	     # This are the calculated coordinates for the middle node
+         	 set Z [expr abs(($zfnodes-$zinodes)/2)+$zinodes ] ;
+        	 set Y [expr abs(($yfnodes-$yinodes)/2)+$yinodes ] ;
+        	 set X [expr abs(($xfnodes-$xinodes)/2)+$xinodes ] ;     
+     	     # Calculated the length of the diagonal element
+     	     set rinfM [expr pow((pow($CLCol,2.0)+pow($CLBeam,2.0)),0.5)];
+			 node $nodeID $X $Y $Z -mass [expr $massinf] 0.0 0.0 0.0 0.0 0.0;			 
+     	 }     
+     
+     	 # First we identified the extreme nodes and the CM node of the diagonal elements
+     	 set nodeCM $nodeID ;
+     	 set nodeI $inodes ;
+     	 set nodeJ  $fnodes ;
+     
+     	 # In this part is defined the diagonal elements where as can be observed its defined a little moment of inertia in the local vertical axis of the element
+         if {$indtwall == 1} {
+		 # This are classic types of elements in OPENSEES that allow to represent possible plasticity concentrate in the plastic length defined
+		 element beamWithHinges $infnum $nodeCM  $nodeI $sectioninfT [expr $rinfM*0.1] $sectionpin [expr $rinfM*0.05] $EminfM $AreainfM 1.e-5 $InertiainfM   [expr $EminfM/2.5] $Ubig $InfillTransf ;
+     	 element beamWithHinges $infnum2 $nodeCM  $nodeJ $sectioninfT [expr $rinfM*0.1] $sectionpin [expr $rinfM*0.05] $EminfM $AreainfM 1.e-5 $InertiainfM   [expr $EminfM/2.5] $Ubig $InfillTransf ;				 
+     	 } elseif {$indtwall == 2}  {
+		 # This are new types of elements in OPENSEES that allow to represent possible plasticity spread away from the plastic length defined
+		 element forceBeamColumn $infnum $nodeCM $nodeI $InfillTransf "HingeRadau $sectioninfT [expr $rinfM*0.1] $sectionpin [expr $rinfM*0.05] $secintertag" <-iter $maxIters $tol>
+		 element forceBeamColumn $infnum2 $nodeCM $nodeJ $InfillTransf "HingeRadau $sectioninfT [expr $rinfM*0.1] $sectionpin [expr $rinfM*0.05] $secintertag" <-iter $maxIters $tol>	 			 
+     	 }
+	 
+         # Recorders for collapse removal
+     	 recorder Collapse -ele $infnum   -time  -crit INFILLWALL  -file $dirpath/CollapseSequence.out  -file_infill INFMW/$fileremoval -global_gravaxis 2 -checknodes $nodeI $nodeCM $nodeJ
+     	 recorder Collapse -ele $infnum2  -time  -crit INFILLWALL   -file_infill INFMW/$fileremoval -global_gravaxis 2 -checknodes $nodeI $nodeCM $nodeJ
+     	 recorder Collapse -ele $infnum $infnum2 -node $nodeCM
+     
+     	 set nodeID [ expr $nodeID + 1 ] ;
+     	 set infnum [ expr $infnum2+1] ;
+     	 set infnum2 [ expr $infnum+1] ;
+     };         
+	 puts " Ready masonry walls of story number: $i"
+};
+
+# Recorders for the displacements of the midspan nodes
+set nodeIDi [ expr $nodjmasniv + 1 ] ;
+set nodeIDf [ expr $nodeID - 1 ] ;
+set ext ".txt" ;
+set nde "nodeMWdisp" ;
+append nde $ext ;
+set namefile $nde ;
+recorder Node  -file  $dirpath/$namefile  -time -nodeRange $nodeIDi $nodeIDf -dof 1 2 3 disp  ;
+puts " Node MW displacement recorder"
+
+puts "OUT-Model of the Masonry Infill Wall"
+
+# _____________________________________________________________________________________________________________________________________________
+# _____________________________________________________________________________________________________________________________________________
+# _____________________________________________________________________________________________________________________________________________
